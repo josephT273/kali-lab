@@ -2,6 +2,7 @@ services:
 
   # ── Kali Linux Hacking Lab ─────────────────────────────────────────────────
   kali:
+    image: ghcr.io/josepht273/kali-lab:latest
     build:
       context: ./kali
       dockerfile: Dockerfile
