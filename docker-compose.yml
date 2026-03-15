@@ -1,5 +1,4 @@
 services:
-
   # ── Kali Linux Hacking Lab ─────────────────────────────────────────────────
   kali:
     image: ghcr.io/josepht273/kali-lab:latest
@@ -13,16 +12,13 @@ services:
     networks:
       - hacknet
     volumes:
-      # Persistent workspace - your work survives restarts
       - workspace:/workspace
-      # Mount host tools/scripts folder for easy file transfer
       - ./scripts:/scripts:ro
     cap_add:
-      # Needed for raw sockets (nmap SYN scan, hping3, tcpdump)
       - NET_RAW
       - NET_ADMIN
     security_opt:
-      - seccomp:unconfined   # needed for ptrace (gdb, strace, ltrace)
+      - seccomp:unconfined
     sysctls:
       - net.ipv4.ip_forward=1
     restart: unless-stopped
