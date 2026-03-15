@@ -1,0 +1,76 @@
+services:
+
+  # ── Kali Linux Hacking Lab ─────────────────────────────────────────────────
+  kali:
+    build:
+      context: ./kali
+      dockerfile: Dockerfile
+    container_name: kali-lab
+    hostname: kali-lab
+    stdin_open: true
+    tty: true
+    networks:
+      - hacknet
+    volumes:
+      # Persistent workspace - your work survives restarts
+      - workspace:/workspace
+      # Mount host tools/scripts folder for easy file transfer
+      - ./scripts:/scripts:ro
+    cap_add:
+      # Needed for raw sockets (nmap SYN scan, hping3, tcpdump)
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - seccomp:unconfined   # needed for ptrace (gdb, strace, ltrace)
+    sysctls:
+      - net.ipv4.ip_forward=1
+    restart: unless-stopped
+
+  # ── DVWA Target ───────────────────────────────────────────────────────────
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: dvwa-target
+    hostname: dvwa
+    networks:
+      - hacknet
+    environment:
+      - DB_SERVER=dvwa-db
+      - DB_PORT=3306
+      - DB_DATABASE=dvwa
+      - DB_USERNAME=dvwa
+      - DB_PASSWORD=p@ssw0rd
+    depends_on:
+      - dvwa-db
+    restart: unless-stopped
+
+  # ── DVWA Database ─────────────────────────────────────────────────────────
+  dvwa-db:
+    image: mariadb:11
+    container_name: dvwa-db
+    hostname: dvwa-db
+    networks:
+      - hacknet
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=p@ssw0rd
+    volumes:
+      - dvwa-db-data:/var/lib/mysql
+    restart: unless-stopped
+
+# ── Isolated bridge network ────────────────────────────────────────────────────
+networks:
+  hacknet:
+    driver: bridge
+    name: hacknet
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  workspace:
+    name: kali-workspace
+  dvwa-db-data:
+    name: dvwa-db-data
