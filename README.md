@@ -18,33 +18,41 @@ hacking-lab/
 
 ## Quick Start
 
+### 1. One-Line Setup (Recommended)
+Use this command to download the manager, clone the repo, and start the lab automatically:
+
 ```bash
-# 1. Make the manager executable
+curl -sL https://raw.githubusercontent.com/josepht273/kali-lab/main/lab.sh | bash
+```
+
+### 2. Manual Setup
+```bash
+# 1. Clone the repo
+git clone https://github.com/josepht273/kali-lab.git
+cd kali-lab
+
+# 2. Make the manager executable
 chmod +x lab.sh
 
-# 2. Build and start the lab (first build takes 10–20 min)
+# 3. Build and start the lab
 ./lab.sh up
-
-# 3. Drop into Kali
-./lab.sh shell
-
-# 4. Print DVWA access info
-./lab.sh dvwa
 ```
 
 ## Network Layout
 
 ```
 hacknet (172.20.0.0/24)
-├── kali-lab    → your attack box
-├── dvwa        → vulnerable web app target
-└── dvwa-db     → dvwa's database (internal only)
+├── kali-lab       → your attack box
+├── dvwa           → vulnerable web app target
+├── dvwa-db        → dvwa's database (internal only)
+├── metasploitable → metasploitable2 target (many vuln services)
+└── juiceshop      → OWASP Juice Shop (modern web app)
 ```
 
-From inside Kali, reach DVWA at:
-- `http://dvwa` or `http://172.20.0.x`
-- Default creds: `admin` / `password`
-- First login: click **Create / Reset Database**
+From inside Kali, reach targets at:
+- **DVWA**: `http://dvwa` (creds: `admin`/`password`)
+- **Metasploitable**: `metasploitable` (creds: `msfadmin`/`msfadmin`)
+- **Juice Shop**: `http://juiceshop:3000`
 
 ## Workspace Layout (persistent)
 
@@ -154,6 +162,8 @@ b64d / b64e           # base64 decode / encode
 ./lab.sh shell     # Enter Kali
 ./lab.sh status    # Show IPs and containers
 ./lab.sh dvwa      # DVWA access info
+./lab.sh metasploit# Metasploitable access info
+./lab.sh juice     # Juice Shop access info
 ./lab.sh rebuild   # Rebuild Kali image
 ./lab.sh down      # Stop lab
 ./lab.sh nuke      # Delete everything (careful!)

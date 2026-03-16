@@ -26,12 +26,25 @@ usage() {
   echo "    status    — Show running containers + IPs"
   echo "    rebuild   — Rebuild Kali image from scratch"
   echo "    dvwa      — Print DVWA access info"
+  echo "    metasploit— Print Metasploitable2 access info"
+  echo "    juice     — Print Juice Shop access info"
   echo "    clean     — Remove containers (keep volumes)"
   echo "    nuke      — Remove everything including volumes"
   echo ""
 }
 
 cmd_up() {
+  # Interactive check for tools/images
+  if [ -z "$(docker images -q ghcr.io/josepht273/kali-lab:latest 2> /dev/null)" ]; then
+    echo -e "${YELLOW}[?] Kali image not found locally.${NC}"
+    echo -n "    Do you want to build/pull the hacking lab tools now? (Y/n): "
+    read confirm < /dev/tty
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+      echo -e "${RED}[!] Cannot start lab without tools. Exiting.${NC}"
+      exit 1
+    fi
+  fi
+
   echo -e "${GREEN}[+] Starting hacking lab...${NC}"
   docker compose up -d --build
   sleep 2
@@ -58,6 +71,11 @@ cmd_status() {
     --format '{{range .Containers}}  {{.Name}}: {{.IPv4Address}}{{"\n"}}{{end}}' 2>/dev/null \
     || echo "  (network not up yet)"
   echo ""
+  echo -e "${YELLOW}  Access Info:${NC}"
+  echo -e "    Run ${CYAN}./lab.sh dvwa${NC}       for DVWA"
+  echo -e "    Run ${CYAN}./lab.sh metasploit${NC} for Metasploitable2"
+  echo -e "    Run ${CYAN}./lab.sh juice${NC}      for Juice Shop"
+  echo ""
 }
 
 cmd_rebuild() {
@@ -78,6 +96,36 @@ cmd_dvwa() {
   echo ""
 }
 
+cmd_metasploit() {
+  META_IP=$(docker inspect metasploitable \
+    --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null)
+  echo ""
+  echo -e "${GREEN}  Metasploitable2 is accessible from INSIDE Kali at:${NC}"
+  echo -e "    ${CYAN}${META_IP}${NC}  (via IP)"
+  echo -e "    ${CYAN}metasploitable${NC} (via hostname)"
+  echo ""
+  echo -e "${YELLOW}  Vulnerable Services:${NC}"
+  echo "    - FTP (21), SSH (22), Telnet (23), SMTP (25)"
+  echo "    - HTTP (80), RPC (111), SMB (139/445)"
+  echo "    - MySQL (3306), PostgreSQL (5432), VNC (5900)"
+  echo "    - IRC (6667), Apache JServ (8180)"
+  echo ""
+  echo -e "${YELLOW}  Default credentials:${NC} msfadmin / msfadmin"
+  echo ""
+}
+
+cmd_juice() {
+  JUICE_IP=$(docker inspect juiceshop \
+    --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null)
+  echo ""
+  echo -e "${GREEN}  OWASP Juice Shop is accessible from INSIDE Kali at:${NC}"
+  echo -e "    ${CYAN}http://juiceshop:3000${NC} (via hostname)"
+  echo -e "    ${CYAN}http://${JUICE_IP}:3000${NC} (via IP)"
+  echo ""
+  echo -e "${YELLOW}  Target:${NC} Modern vulnerable web application"
+  echo ""
+}
+
 cmd_clean() {
   echo -e "${YELLOW}[*] Removing containers (volumes preserved)...${NC}"
   docker compose down --remove-orphans
@@ -85,7 +133,8 @@ cmd_clean() {
 
 cmd_nuke() {
   echo -e "${RED}[!] This will delete ALL lab data including your workspace volume!${NC}"
-  read -p "    Are you sure? (yes/N): " confirm
+  echo -n "    Are you sure? (yes/N): "
+  read confirm < /dev/tty
   if [[ "$confirm" == "yes" ]]; then
     docker compose down -v --remove-orphans
     docker rmi hacking-lab-kali 2>/dev/null || true
@@ -95,6 +144,32 @@ cmd_nuke() {
   fi
 }
 
+# ── Self-Bootstrap Check ─────────────────────────────────────────────────────
+# If docker-compose.yml is missing, we are likely running from a standalone download.
+if [ ! -f "docker-compose.yml" ]; then
+  echo -e "${RED}[!] docker-compose.yml not found!${NC}"
+  echo -e "${YELLOW}[?] It looks like you are running the script outside the lab directory.${NC}"
+  # Use /dev/tty for input to allow running via curl | bash
+  echo -n "    Do you want to clone the full Hacking Lab repository? (Y/n): "
+  read confirm < /dev/tty
+  if [[ ! "$confirm" =~ ^[Nn]$ ]]; then
+    # Default to YES
+    echo -e "${GREEN}[+] Cloning repository...${NC}"
+    if git clone https://github.com/josepht273/kali-lab.git kali-lab; then
+      cd kali-lab
+      echo -e "${GREEN}[+] Repository cloned. Starting lab...${NC}"
+      chmod +x lab.sh
+      exec ./lab.sh "${@:-up}"
+    else
+      echo -e "${RED}[!] Clone failed. Please check your internet connection.${NC}"
+      exit 1
+    fi
+  else
+    echo -e "${RED}[!] Cannot run lab without configuration files. Exiting.${NC}"
+    exit 1
+  fi
+fi
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 case "${1}" in
   up)      cmd_up ;;
@@ -103,6 +178,8 @@ case "${1}" in
   status)  cmd_status ;;
   rebuild) cmd_rebuild ;;
   dvwa)    cmd_dvwa ;;
+  metasploit) cmd_metasploit ;;
+  juice)   cmd_juice ;;
   clean)   cmd_clean ;;
   nuke)    cmd_nuke ;;
   *)       usage ;;

@@ -56,6 +56,24 @@ services:
       - dvwa-db-data:/var/lib/mysql
     restart: unless-stopped
 
+  # ── Metasploitable2 Target ────────────────────────────────────────────────
+  metasploitable:
+    image: tleemcjr/metasploitable2:latest
+    container_name: metasploitable
+    hostname: metasploitable
+    networks:
+      - hacknet
+    restart: unless-stopped
+
+  # ── OWASP Juice Shop Target ───────────────────────────────────────────────
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    container_name: juiceshop
+    hostname: juiceshop
+    networks:
+      - hacknet
+    restart: unless-stopped
+
 # ── Isolated bridge network ────────────────────────────────────────────────────
 networks:
   hacknet:
