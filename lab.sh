@@ -20,11 +20,11 @@ usage() {
   echo -e "  ${CYAN}Usage:${NC} ./lab.sh [command]"
   echo ""
   echo -e "  ${YELLOW}Commands:${NC}"
-  echo "    up        — Build and start the full lab"
+  echo "    up        — Pull (if needed) and start the full lab"
   echo "    down      — Stop the lab"
   echo "    shell     — Drop into Kali shell"
   echo "    status    — Show running containers + IPs"
-  echo "    rebuild   — Rebuild Kali image from scratch"
+  echo "    build     — Build Kali image locally (for dev)"
   echo "    dvwa      — Print DVWA access info"
   echo "    metasploit— Print Metasploitable2 access info"
   echo "    juice     — Print Juice Shop access info"
@@ -34,19 +34,13 @@ usage() {
 }
 
 cmd_up() {
-  # Interactive check for tools/images
   if [ -z "$(docker images -q ghcr.io/josepht273/kali-lab:latest 2> /dev/null)" ]; then
-    echo -e "${YELLOW}[?] Kali image not found locally.${NC}"
-    echo -n "    Do you want to build/pull the hacking lab tools now? (Y/n): "
-    read confirm < /dev/tty
-    if [[ "$confirm" =~ ^[Nn]$ ]]; then
-      echo -e "${RED}[!] Cannot start lab without tools. Exiting.${NC}"
-      exit 1
-    fi
+    echo -e "${YELLOW}[+] Kali image not found. Pulling from GHCR...${NC}"
+    docker compose pull kali
   fi
 
   echo -e "${GREEN}[+] Starting hacking lab...${NC}"
-  docker compose up -d --build
+  docker compose up -d
   sleep 2
   cmd_status
 }
@@ -78,9 +72,15 @@ cmd_status() {
   echo ""
 }
 
+cmd_build() {
+  echo -e "${YELLOW}[*] Building Kali image locally...${NC}"
+  docker compose build kali
+}
+
 cmd_rebuild() {
-  echo -e "${YELLOW}[*] Rebuilding Kali image (no cache)...${NC}"
-  docker compose build --no-cache kali
+  echo -e "${YELLOW}[*] Pulling latest Kali image from GHCR...${NC}"
+  docker compose pull kali
+  docker image prune -f
 }
 
 cmd_dvwa() {
@@ -137,7 +137,7 @@ cmd_nuke() {
   read confirm < /dev/tty
   if [[ "$confirm" == "yes" ]]; then
     docker compose down -v --remove-orphans
-    docker rmi hacking-lab-kali 2>/dev/null || true
+    docker rmi ghcr.io/josepht273/kali-lab:latest 2>/dev/null || true
     echo -e "${RED}[!] Lab nuked.${NC}"
   else
     echo "  Cancelled."
@@ -176,6 +176,7 @@ case "${1}" in
   down)    cmd_down ;;
   shell)   cmd_shell ;;
   status)  cmd_status ;;
+  build)   cmd_build ;;
   rebuild) cmd_rebuild ;;
   dvwa)    cmd_dvwa ;;
   metasploit) cmd_metasploit ;;

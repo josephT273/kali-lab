@@ -69,8 +69,9 @@ ENV PATH="$PATH:/opt/ghidra/support"
 # ── SecLists wordlists ────────────────────────────────────────────────────────
 RUN git clone --depth=1 https://github.com/danielmiessler/SecLists /opt/seclists
 
-# ── Create workspace ──────────────────────────────────────────────────────────
-RUN mkdir -p /workspace/{web,network,re,ctf,loot}
+# ── Entrypoint (recreates workspace dirs at runtime — volume mount hides build-time mkdir) ──
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # ── Shell config ──────────────────────────────────────────────────────────────
 COPY config/.zshrc /root/.zshrc
@@ -81,4 +82,5 @@ RUN chsh -s /bin/zsh root
 
 WORKDIR /workspace
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/zsh"]
